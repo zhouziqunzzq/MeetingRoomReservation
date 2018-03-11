@@ -34,3 +34,14 @@ func Pong(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	responseJson(w, res, http.StatusOK)
 	return
 }
+
+func PongPost(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	req.ParseForm()
+	res := map[string]interface{}{
+		"code":   http.StatusOK,
+		"result": true,
+		"data":   req.Form,
+	}
+	responseJson(w, res, http.StatusOK)
+	return
+}
