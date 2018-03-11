@@ -15,8 +15,9 @@ import (
 var mux = httprouter.New()
 
 func initRouter() {
-	mux.GET("/api/ping", handler.Pong)
-	mux.POST("/api/testPost", handler.PongPost)
+	mux.GET("/api", handler.Pong)
+	mux.GET("/api/test/get", handler.Pong)
+	mux.POST("/api/test/post", handler.PongPost)
 	mux.NotFound = http.HandlerFunc(handler.NotFoundHandler)
 }
 
