@@ -24,7 +24,7 @@ func initRouter() {
 func initCORS() http.Handler {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   GlobalConfig.ALLOW_ORIGIN,
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS", "PUT", "DELETE"},
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"},
 		AllowCredentials: true,
 	})
 	h := c.Handler(mux)
