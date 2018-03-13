@@ -2,22 +2,40 @@ package main
 
 import (
 	"github.com/BurntSushi/toml"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
 	"github.com/urfave/negroni"
 	"github.com/yanzay/log"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/request"
 	. "github.com/zhouziqunzzq/teacherAssessmentBackend/config"
 	"github.com/zhouziqunzzq/teacherAssessmentBackend/handler"
+	"github.com/zhouziqunzzq/teacherAssessmentBackend/model"
 	"net/http"
 	"strconv"
 )
 
+// Global var definition
 var mux = httprouter.New()
+var db *gorm.DB
+
+func initDB() {
+	sqliteDatabase, err := gorm.Open("sqlite3", GlobalConfig.SQLITE_FILE)
+	if err != nil {
+		panic(err)
+	}
+	db = sqliteDatabase
+	db.AutoMigrate(&model.User{})
+}
 
 func initRouter() {
+	// Test
 	mux.GET("/api", handler.Pong)
-	mux.GET("/api/test/get", handler.Pong)
-	mux.POST("/api/test/post", handler.PongPost)
+	mux.GET("/api/v1", handler.Pong)
+	mux.GET("/api/v1/test/get", handler.Pong)
+	mux.POST("/api/v1/test/post", handler.PongPost)
 	mux.NotFound = http.HandlerFunc(handler.NotFoundHandler)
 }
 
@@ -40,11 +58,17 @@ func initMiddleware(h http.Handler) *negroni.Negroni {
 
 func main() {
 	// Load config from toml
+	log.Info("Loading config from file...")
 	if _, err := toml.DecodeFile("config.toml", &GlobalConfig); err != nil {
 		panic(err)
 		return
 	}
-	// Init Router, CORS and Middleware
+	// Init database
+	log.Info("Connecting to Database...")
+	initDB()
+	defer db.Close()
+	// Init Router, CORS, Middleware, OAuth
+	log.Info("Initializing server...")
 	initRouter()
 	h := initCORS()
 	n := initMiddleware(h)

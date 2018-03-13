@@ -1,2 +1,4 @@
 port = 8080
 allow_origin = ["*"]
+sqlite_path = "core.db"
+jwt_key = "foobar"
