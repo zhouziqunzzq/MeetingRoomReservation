@@ -2,15 +2,21 @@ package handler
 
 import (
 	"net/http"
-	"github.com/julienschmidt/httprouter"
 )
 
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte("404 Not Found"))
 	return
 }
 
-func Pong(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+func MethodNotAllowedHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusMethodNotAllowed)
+	w.Write([]byte("405 Method Not Allowed"))
+	return
+}
+
+func Pong(w http.ResponseWriter, req *http.Request) {
 	res := map[string]interface{}{
 		"code":   http.StatusOK,
 		"result": true,
@@ -20,7 +26,7 @@ func Pong(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	return
 }
 
-func PongPost(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+func PongPost(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	res := map[string]interface{}{
 		"code":   http.StatusOK,

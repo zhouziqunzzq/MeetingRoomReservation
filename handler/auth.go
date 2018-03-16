@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"github.com/julienschmidt/httprouter"
 	"github.com/zhouziqunzzq/teacherAssessmentBackend/model"
 	"github.com/yanzay/log"
 	"github.com/dgrijalva/jwt-go"
@@ -10,7 +9,7 @@ import (
 	. "github.com/zhouziqunzzq/teacherAssessmentBackend/config"
 )
 
-func Login(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+func Login(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	// Parse login form
 	var user1 model.User

@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/BurntSushi/toml"
+	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
 	"github.com/urfave/negroni"
 	"github.com/yanzay/log"
@@ -16,7 +16,7 @@ import (
 )
 
 // Global var definition
-var mux = httprouter.New()
+var r = mux.NewRouter()
 
 func initDB() {
 	sqliteDatabase, err := gorm.Open("sqlite3", GlobalConfig.SQLITE_FILE)
@@ -28,14 +28,20 @@ func initDB() {
 }
 
 func initRouter() {
+	// subrouters
+	api := r.PathPrefix("/api").Subrouter()
+	v1Api := api.PathPrefix("/v1").Subrouter()
+	auth := v1Api.PathPrefix("/auth").Subrouter()
 	// Test
-	mux.GET("/api", handler.Pong)
-	mux.GET("/api/v1", handler.Pong)
-	mux.GET("/api/v1/test/get", handler.Pong)
-	mux.POST("/api/v1/test/post", handler.PongPost)
+	r.Methods("GET").Path("/api").HandlerFunc(handler.Pong)
+	api.Methods("GET").Path("/v1").HandlerFunc(handler.Pong)
+	v1Api.Methods("GET").Path("/test").HandlerFunc(handler.Pong)
+	v1Api.Methods("POST").Path("/test").HandlerFunc(handler.PongPost)
 	// Authentication
-	mux.POST("/api/v1/auth/login", handler.Login)
-	mux.NotFound = http.HandlerFunc(handler.NotFoundHandler)
+	auth.Methods("POST").Path("/login").HandlerFunc(handler.Login)
+	// NotFound
+	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
+	r.MethodNotAllowedHandler = http.HandlerFunc(handler.MethodNotAllowedHandler)
 }
 
 func initCORS() http.Handler {
@@ -44,7 +50,7 @@ func initCORS() http.Handler {
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"},
 		AllowCredentials: true,
 	})
-	h := c.Handler(mux)
+	h := c.Handler(r)
 	return h
 }
 
