@@ -28,7 +28,7 @@ func Login(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		if err.Error() == "GetUser: record not found" {
 			responseJson(w,
 				getErrorTpl(http.StatusNotFound, "用户名不存在"),
-				http.StatusNotFound)
+				http.StatusOK)
 		} else {
 			log.Error(err)
 			responseJson(w,
@@ -41,7 +41,7 @@ func Login(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	if user1.Password != user.Password {
 		responseJson(w,
 			getErrorTpl(http.StatusNotFound, "密码错误"),
-			http.StatusNotFound)
+			http.StatusOK)
 		return
 	}
 	// Generate JWT
