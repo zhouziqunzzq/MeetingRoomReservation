@@ -14,7 +14,7 @@ func responseJson(w http.ResponseWriter, data map[string]interface{}, httpStatus
 		http.Error(w, "Error occurred while encoding json response.", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(httpStatusCode)
 	w.Write(resJson)
 	return
