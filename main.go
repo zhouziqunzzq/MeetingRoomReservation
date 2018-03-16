@@ -8,8 +8,6 @@ import (
 	"github.com/rs/cors"
 	"github.com/urfave/negroni"
 	"github.com/yanzay/log"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
 	. "github.com/zhouziqunzzq/teacherAssessmentBackend/config"
 	"github.com/zhouziqunzzq/teacherAssessmentBackend/handler"
 	"github.com/zhouziqunzzq/teacherAssessmentBackend/model"
@@ -19,15 +17,14 @@ import (
 
 // Global var definition
 var mux = httprouter.New()
-var db *gorm.DB
 
 func initDB() {
 	sqliteDatabase, err := gorm.Open("sqlite3", GlobalConfig.SQLITE_FILE)
 	if err != nil {
 		panic(err)
 	}
-	db = sqliteDatabase
-	db.AutoMigrate(&model.User{})
+	model.Db = sqliteDatabase
+	model.Db.AutoMigrate(&model.User{})
 }
 
 func initRouter() {
@@ -36,6 +33,8 @@ func initRouter() {
 	mux.GET("/api/v1", handler.Pong)
 	mux.GET("/api/v1/test/get", handler.Pong)
 	mux.POST("/api/v1/test/post", handler.PongPost)
+	// Authentication
+	mux.POST("/api/v1/auth/login", handler.Login)
 	mux.NotFound = http.HandlerFunc(handler.NotFoundHandler)
 }
 
@@ -66,7 +65,7 @@ func main() {
 	// Init database
 	log.Info("Connecting to Database...")
 	initDB()
-	defer db.Close()
+	defer model.Db.Close()
 	// Init Router, CORS, Middleware, OAuth
 	log.Info("Initializing server...")
 	initRouter()
