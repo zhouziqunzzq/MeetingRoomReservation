@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"github.com/yanzay/log"
 	"github.com/pkg/errors"
+	"github.com/gorilla/mux"
+	"github.com/urfave/negroni"
+	"github.com/dgrijalva/jwt-go"
 )
 
 func responseJson(w http.ResponseWriter, data map[string]interface{}, httpStatusCode int) {
@@ -20,7 +23,7 @@ func responseJson(w http.ResponseWriter, data map[string]interface{}, httpStatus
 	return
 }
 
-func getOKTpl()(map[string]interface{}){
+func getOKTpl() (map[string]interface{}) {
 	return map[string]interface{}{
 		"code":   http.StatusOK,
 		"result": true,
@@ -28,7 +31,7 @@ func getOKTpl()(map[string]interface{}){
 	}
 }
 
-func getErrorTpl(code int, msg string)(map[string]interface{}){
+func getErrorTpl(code int, msg string) (map[string]interface{}) {
 	return map[string]interface{}{
 		"code":   code,
 		"result": false,
@@ -58,4 +61,38 @@ func getFormItemOrErr(w http.ResponseWriter, req *http.Request,
 		err = nil
 	}
 	return
+}
+
+/* Generates a negroni handler for the route:
+    pathType (base+string)
+    which is handled by `f` and passed through
+    middleware `mids` sequentially.
+
+    ex:
+    NegroniRoute(router, "/api/v1", "/users/update", "POST", UserUpdateHandler, LoggingMiddleware, AuthorizationMiddleware)
+*/
+func GetSubrouterWithMiddlewares(
+	parent *mux.Router,
+	base string,
+	path string,
+	mw ...func(http.ResponseWriter, *http.Request, http.HandlerFunc), // Middlewares
+) (*mux.Router) {
+	baseRouter := mux.NewRouter()
+	n := negroni.New()
+	for i := range mw {
+		n.Use(negroni.HandlerFunc(mw[i]))
+	}
+	n.UseHandler(baseRouter)
+	parent.PathPrefix(path).Handler(n)
+	return baseRouter.PathPrefix(base + path).Subrouter()
+}
+
+func GetUIDFromJWT(req *http.Request)(uint) {
+	req.ParseForm()
+	p := jwt.Parser{
+		UseJSONNumber:false,
+		SkipClaimsValidation:true,
+	}
+	t, _, _ := p.ParseUnverified(req.Form["access_token"][0], jwt.MapClaims{})
+	return uint(t.Claims.(jwt.MapClaims)["uid"].(float64))
 }

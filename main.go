@@ -16,7 +16,7 @@ import (
 )
 
 // Global var definition
-var r = mux.NewRouter()
+var r = mux.NewRouter().StrictSlash(true)
 
 func initDB() {
 	sqliteDatabase, err := gorm.Open("sqlite3", GlobalConfig.SQLITE_FILE)
@@ -27,18 +27,33 @@ func initDB() {
 	model.Db.AutoMigrate(&model.User{})
 }
 
+//func initRouter() {
+//	v1ApiRouter := mux.NewRouter()
+//	v1ApiRouter.HandleFunc("/api/v1", )
+//	// NotFound
+//	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
+//	r.MethodNotAllowedHandler = http.HandlerFunc(handler.MethodNotAllowedHandler)
+//}
+
 func initRouter() {
-	// subrouters
-	api := r.PathPrefix("/api").Subrouter()
-	v1Api := api.PathPrefix("/v1").Subrouter()
+	// public subrouters
+	baseApiStr := "/api"
+	baseApiVerStr := "/v1"
+	baseStr := baseApiStr + baseApiVerStr
+	api := r.PathPrefix(baseApiStr).Subrouter()
+	v1Api := api.PathPrefix(baseApiVerStr).Subrouter()
 	auth := v1Api.PathPrefix("/auth").Subrouter()
 	// Test
-	r.Methods("GET").Path("/api").HandlerFunc(handler.Pong)
-	api.Methods("GET").Path("/v1").HandlerFunc(handler.Pong)
+	api.Methods("GET").Path("/").HandlerFunc(handler.Pong)
+	v1Api.Methods("GET").Path("/").HandlerFunc(handler.Pong)
 	v1Api.Methods("GET").Path("/test").HandlerFunc(handler.Pong)
 	v1Api.Methods("POST").Path("/test").HandlerFunc(handler.PongPost)
 	// Authentication
-	auth.Methods("POST").Path("/login").HandlerFunc(handler.Login)
+	auth.Methods("POST").Path("/login").HandlerFunc(handler.HandleLogin)
+	// User
+	userRoutes := handler.GetSubrouterWithMiddlewares(v1Api, baseStr,
+		"/user", handler.ValidateTokenMiddleware)
+	userRoutes.Methods("GET").Path("/info").HandlerFunc(handler.HandleGetUserInfo)
 	// NotFound
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 	r.MethodNotAllowedHandler = http.HandlerFunc(handler.MethodNotAllowedHandler)
@@ -54,9 +69,11 @@ func initCORS() http.Handler {
 	return h
 }
 
-func initMiddleware(h http.Handler) *negroni.Negroni {
+func initGlobalMiddleware(h http.Handler) *negroni.Negroni {
 	n := negroni.New()
 	n.Use(negroni.NewStatic(http.Dir("app")))
+	n.Use(negroni.NewRecovery())
+	n.Use(negroni.NewLogger())
 	n.UseHandler(h)
 	return n
 }
@@ -76,7 +93,7 @@ func main() {
 	log.Info("Initializing server...")
 	initRouter()
 	h := initCORS()
-	n := initMiddleware(h)
+	n := initGlobalMiddleware(h)
 	// Start the server
 	log.Info("Starting HTTP server...")
 	err := http.ListenAndServe(":"+strconv.FormatInt(GlobalConfig.PORT, 10), n)

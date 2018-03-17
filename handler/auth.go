@@ -7,9 +7,11 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"time"
 	. "github.com/zhouziqunzzq/teacherAssessmentBackend/config"
+	"github.com/dgrijalva/jwt-go/request"
+	"github.com/gorilla/context"
 )
 
-func Login(w http.ResponseWriter, req *http.Request) {
+func HandleLogin(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	// Parse login form
 	var user1 model.User
@@ -60,6 +62,27 @@ func Login(w http.ResponseWriter, req *http.Request) {
 	// Successfully logged in
 	tpl := getOKTpl()
 	tpl["msg"] = "登陆成功"
-	tpl["token"] = tokenString
+	tpl["access_token"] = tokenString
 	responseJson(w, tpl, http.StatusOK)
+}
+
+func ValidateTokenMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+	token, err := request.ParseFromRequest(r, request.OAuth2Extractor,
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(GlobalConfig.JWT_KEY), nil
+		})
+	if err != nil {
+		responseJson(w, getErrorTpl(http.StatusUnauthorized, "未授权的访问"),
+			http.StatusUnauthorized)
+		return
+	} else {
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			context.Set(r, "uid", claims["uid"])
+			next(w, r)
+		} else {
+			responseJson(w, getErrorTpl(http.StatusUnauthorized, "无效的Token"),
+				http.StatusUnauthorized)
+			return
+		}
+	}
 }

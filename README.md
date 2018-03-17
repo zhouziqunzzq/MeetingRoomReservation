@@ -40,7 +40,7 @@ follows *RESTful API* standard.
                 "code":   200,
                 "result": true,
                 "msg":    "登陆成功",
-                "token":  user's JWT
+                "access_token":  user's JWT
             }
     * error
 
@@ -50,10 +50,10 @@ follows *RESTful API* standard.
                 "msg":    "用户名错误" or "密码错误" or "登录失败，未知错误",
             }
 ### User basic info(login required)
-#### GET: /user
+#### GET: /user/info
 * Get user basic info
 * Request:
-    * token string
+    * access_token string
 * Response:
     * success
 
@@ -65,7 +65,8 @@ follows *RESTful API* standard.
                                 "username": username,
                                 "name":     truename,
                                 "tel":      telephone,
-                                "identity": "教师" or "管理员"
+                                "name":     张三
+                                "identity": 0(管理员) or 1(教师)
                           }
             }
     * error
@@ -73,5 +74,5 @@ follows *RESTful API* standard.
             {
                 "code":   error code,
                 "result": false,
-                "msg":    "未授权的访问" or "未知错误",
+                "msg":    "未授权的访问" or "无效的Token",
             }
