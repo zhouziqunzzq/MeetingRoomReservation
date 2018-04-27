@@ -8,9 +8,9 @@ import (
 	"github.com/rs/cors"
 	"github.com/urfave/negroni"
 	"github.com/yanzay/log"
-	. "github.com/zhouziqunzzq/teacherAssessmentBackend/config"
-	"github.com/zhouziqunzzq/teacherAssessmentBackend/handler"
-	"github.com/zhouziqunzzq/teacherAssessmentBackend/model"
+	. "github.com/zhouziqunzzq/MeetingRoomReservation/config"
+	"github.com/zhouziqunzzq/MeetingRoomReservation/handler"
+	"github.com/zhouziqunzzq/MeetingRoomReservation/model"
 	"net/http"
 	"strconv"
 )

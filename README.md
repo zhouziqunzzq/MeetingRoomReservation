@@ -63,9 +63,8 @@ follows *RESTful API* standard.
                 "msg":    "success",
                 "data":   {
                                 "username": username,
-                                "name":     truename,
+                                "name":     张三,
                                 "tel":      telephone,
-                                "name":     张三
                                 "identity": 0(管理员) or 1(教师)
                           }
             }

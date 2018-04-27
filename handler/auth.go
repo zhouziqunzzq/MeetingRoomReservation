@@ -2,11 +2,11 @@ package handler
 
 import (
 	"net/http"
-	"github.com/zhouziqunzzq/teacherAssessmentBackend/model"
+	"github.com/zhouziqunzzq/MeetingRoomReservation/model"
 	"github.com/yanzay/log"
 	"github.com/dgrijalva/jwt-go"
 	"time"
-	. "github.com/zhouziqunzzq/teacherAssessmentBackend/config"
+	. "github.com/zhouziqunzzq/MeetingRoomReservation/config"
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/gorilla/context"
 )

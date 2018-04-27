@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"github.com/zhouziqunzzq/teacherAssessmentBackend/model"
+	"github.com/zhouziqunzzq/MeetingRoomReservation/model"
 	"github.com/yanzay/log"
 )
 
