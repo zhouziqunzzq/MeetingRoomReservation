@@ -31,7 +31,7 @@ func PongPost(w http.ResponseWriter, req *http.Request) {
 	res := map[string]interface{}{
 		"code":   http.StatusOK,
 		"result": true,
-		"data":   req.Form,
+		"msg":    "OK",
 	}
 	responseJson(w, res, http.StatusOK)
 	return

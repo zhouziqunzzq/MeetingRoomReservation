@@ -24,16 +24,9 @@ func initDB() {
 		panic(err)
 	}
 	model.Db = sqliteDatabase
-	model.Db.AutoMigrate(&model.User{})
+	model.Db.AutoMigrate(&model.User{}, &model.Building{}, &model.Meetingroom{},
+		&model.Weekplan{}, &model.Dayplan{}, &model.Timeplan{}, &model.Reservation{})
 }
-
-//func initRouter() {
-//	v1ApiRouter := mux.NewRouter()
-//	v1ApiRouter.HandleFunc("/api/v1", )
-//	// NotFound
-//	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
-//	r.MethodNotAllowedHandler = http.HandlerFunc(handler.MethodNotAllowedHandler)
-//}
 
 func initRouter() {
 	// public subrouters
@@ -42,18 +35,21 @@ func initRouter() {
 	baseStr := baseApiStr + baseApiVerStr
 	api := r.PathPrefix(baseApiStr).Subrouter()
 	v1Api := api.PathPrefix(baseApiVerStr).Subrouter()
-	auth := v1Api.PathPrefix("/auth").Subrouter()
 	// Test
 	api.Methods("GET").Path("/").HandlerFunc(handler.Pong)
 	v1Api.Methods("GET").Path("/").HandlerFunc(handler.Pong)
 	v1Api.Methods("GET").Path("/test").HandlerFunc(handler.Pong)
 	v1Api.Methods("POST").Path("/test").HandlerFunc(handler.PongPost)
 	// Authentication
+	auth := v1Api.PathPrefix("/auth").Subrouter()
 	auth.Methods("POST").Path("/login").HandlerFunc(handler.HandleLogin)
 	// User
 	userRoutes := handler.GetSubrouterWithMiddlewares(v1Api, baseStr,
 		"/user", handler.ValidateTokenMiddleware)
 	userRoutes.Methods("GET").Path("/info").HandlerFunc(handler.HandleGetUserInfo)
+	// Meetingroom
+	//mrRoutes := v1Api.PathPrefix("/meetingroom").Subrouter()
+	//mrRoutes.Methods("GET").Path("/")
 	// NotFound
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 	r.MethodNotAllowedHandler = http.HandlerFunc(handler.MethodNotAllowedHandler)
@@ -85,10 +81,20 @@ func main() {
 		panic(err)
 		return
 	}
+
 	// Init database
 	log.Info("Connecting to Database...")
 	initDB()
 	defer model.Db.Close()
+	var meetingRoom model.Meetingroom
+	model.Db.Preload("Weekplan.Dayplans", func(db *gorm.DB) *gorm.DB {
+		return db.Order("dayplans.weekday ASC")
+	}).Preload("Weekplan.Dayplans.Timeplans", func(db *gorm.DB) *gorm.DB {
+		return db.Order("timeplans.begin ASC")
+	}).Preload("Building").First(&meetingRoom)
+	//fmt.Println(meetingRoom)
+	meetingRoom.GetAvlTime(2)
+
 	// Init Router, CORS, Middleware, OAuth
 	log.Info("Initializing server...")
 	initRouter()
