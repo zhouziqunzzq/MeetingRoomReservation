@@ -48,8 +48,8 @@ func initRouter() {
 		"/user", handler.ValidateTokenMiddleware)
 	userRoutes.Methods("GET").Path("/info").HandlerFunc(handler.HandleGetUserInfo)
 	// Meetingroom
-	//mrRoutes := v1Api.PathPrefix("/meetingroom").Subrouter()
-	//mrRoutes.Methods("GET").Path("/")
+	mrRoutes := v1Api.PathPrefix("/meetingroom").Subrouter()
+	mrRoutes.Methods("GET").Path("/").HandlerFunc(handler.HandleGetMeetingroomList)
 	// NotFound
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 	r.MethodNotAllowedHandler = http.HandlerFunc(handler.MethodNotAllowedHandler)
@@ -86,14 +86,6 @@ func main() {
 	log.Info("Connecting to Database...")
 	initDB()
 	defer model.Db.Close()
-	var meetingRoom model.Meetingroom
-	model.Db.Preload("Weekplan.Dayplans", func(db *gorm.DB) *gorm.DB {
-		return db.Order("dayplans.weekday ASC")
-	}).Preload("Weekplan.Dayplans.Timeplans", func(db *gorm.DB) *gorm.DB {
-		return db.Order("timeplans.begin ASC")
-	}).Preload("Building").First(&meetingRoom)
-	//fmt.Println(meetingRoom)
-	meetingRoom.GetAvlTime(2)
 
 	// Init Router, CORS, Middleware, OAuth
 	log.Info("Initializing server...")

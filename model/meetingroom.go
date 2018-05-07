@@ -35,8 +35,19 @@ func (m *Meetingroom) GetAvlTime(dayCnt uint) {
 
 	fmt.Println(m.Reservations)
 	fmt.Println(m.Weekplan.Dayplans[0])
-	for i:=0; i < int(dayCnt); i++ {
+	for i := 0; i < int(dayCnt); i++ {
 		// TODO: calculate per-day AvlTime
 	}
 	return
+}
+
+// timeplans: a slice of Timeplans in a day
+// reservations: a slice of Reservations in a day
+// begin: HH:MM:SS
+// end: HH:MM:SS
+// date: YYYY-MM-DD
+func GetAvlTimeOneDay(timeplans []Timeplan, reservations []Reservation,
+	begin string, end string, date string) []TimeSlice {
+	// TODO: calculate per-day AvlTime
+	return nil
 }

@@ -10,6 +10,8 @@ type Reservation struct {
 	MeetingroomID uint        `json:"-"`
 	Begin         string      `gorm:"type:varchar(20)" json:"begin"` // YYYY-MM-DD HH:MM:SS
 	End           string      `gorm:"type:varchar(20)" json:"end"`   // YYYY-MM-DD HH:MM:SS
+	BeginTime     string      `gorm:"-" json:"-"`                    // HH:MM:SS only used for calculation
+	EndTime       string      `gorm:"-" json:"-"`                    // HH:MM:SS only used for calculation
 	CreatedAt     time.Time   `json:"created_at"`
 	UpdatedAt     time.Time   `json:"updated_at"`
 	DeletedAt     *time.Time  `json:"-"`
