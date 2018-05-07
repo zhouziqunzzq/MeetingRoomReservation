@@ -49,5 +49,52 @@ func (m *Meetingroom) GetAvlTime(dayCnt uint) {
 func GetAvlTimeOneDay(timeplans []Timeplan, reservations []Reservation,
 	begin string, end string, date string) []TimeSlice {
 	// TODO: calculate per-day AvlTime
-	return nil
+	timeslices := make([]TimeSlice, 0)
+	now := 0;
+	for i := 0; i < len(reservations); i++ {
+		var s1, s2 string
+		if reservations[i].EndTime <= timeplans[now].End {
+			if timeplans[now].Begin != reservations[i].BeginTime {
+				s1 = timeplans[now].Begin
+				s2 = reservations[i].BeginTime
+			}
+			if timeplans[now].End == reservations[i].EndTime {
+				now++
+			} else {
+				timeplans[now].Begin = reservations[i].EndTime
+			}
+		} else {
+			s1 = timeplans[now].Begin
+			s2 = timeplans[now].End
+			now++
+			i--
+		}
+		if len(s1) != 0 && len(s2) != 0 {
+			timeslices = timeslices.append(TimeSlice{Begin: s1, End: s2})
+		}
+	}
+	for i := now; i < len(timeplans); i++ {
+		timeslices = timeslices.append(TimeSlice{Begin: timeplans[i].Begin, End: timeplans[i].End})
+	}
+	st := 0
+	ed := len(timeslices)-1
+	for i := 0; i < len(timeslices); i++ {
+		if begin >= timeslices[i].Begin && begin <= timeslices[i].End {
+			if begin == timeslices[i].End {
+				st = i+1
+			} else {
+				st = i
+				timeslices[i].Begin = begin
+			}
+		}
+		if end >= timeslices[i].Begin && end <= timeslices[i].End {
+			if end == timeslices[i].Begin {
+				ed = i-1
+			} else {
+				ed = i
+				timeslices[i].End = end
+			}
+		}
+	}
+	return timeslices[st:ed]
 }
