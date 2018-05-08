@@ -24,7 +24,7 @@ func HandleLogin(w http.ResponseWriter, req *http.Request) {
 	}
 	// Check user in DB
 	var user model.User
-	user, err := model.GetUserByUsername(model.Db, user1.Username)
+	user, err := model.GetUserByUsername(user1.Username)
 	if err != nil {
 		if err.Error() == "GetUser: record not found" {
 			responseJson(w,
@@ -49,6 +49,7 @@ func HandleLogin(w http.ResponseWriter, req *http.Request) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := make(jwt.MapClaims)
 	claims["uid"] = user.ID
+	claims["utype"] = user.Type
 	claims["iat"] = time.Now().Unix()
 	token.Claims = claims
 	tokenString, err := token.SignedString([]byte(GlobalConfig.JWT_KEY))
@@ -67,24 +68,23 @@ func HandleLogin(w http.ResponseWriter, req *http.Request) {
 }
 
 func ValidateTokenMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	token, err := request.ParseFromRequest(r, request.OAuth2Extractor,
-		func(token *jwt.Token) (interface{}, error) {
-			return []byte(GlobalConfig.JWT_KEY), nil
-		})
-	if err != nil {
+	if !ValidateToken(w, r) {
+		return
+	} else {
+		next(w, r)
+	}
+}
+
+func ValidateAdminTokenMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+	if !ValidateToken(w, r) {
+		return
+	}
+	if !model.CheckAdmin(uint(GetUIDFromJWT(r))) {
 		responseJson(w, getErrorTpl(http.StatusUnauthorized, "未授权的访问"),
 			http.StatusUnauthorized)
 		return
-	} else {
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			context.Set(r, "uid", claims["uid"])
-			next(w, r)
-		} else {
-			responseJson(w, getErrorTpl(http.StatusUnauthorized, "无效的Token"),
-				http.StatusUnauthorized)
-			return
-		}
 	}
+	next(w, r)
 }
 
 func ValidateToken(w http.ResponseWriter, r *http.Request) bool {

@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/yanzay/log"
 	"time"
+	"github.com/pkg/errors"
 )
 
 func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
@@ -73,6 +74,25 @@ func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
 	return
 }
 
+func GetMeetingroomIDFromUriOrError(w http.ResponseWriter, req *http.Request) (id int, err error) {
+	vars := mux.Vars(req)
+	id, err = strconv.Atoi(vars["id"])
+	if err != nil {
+		res := getErrorTpl(http.StatusNotFound, "会议室ID非法")
+		responseJson(w, res, http.StatusNotFound)
+		return
+	}
+	var meetingrooms []model.Meetingroom
+	model.Db.Where("id = ?", id).Find(&meetingrooms)
+	if len(meetingrooms) == 0 {
+		res := getErrorTpl(http.StatusNotFound, "会议室ID不存在")
+		responseJson(w, res, http.StatusNotFound)
+		err = errors.New("Invalid Meetingroom ID")
+		return
+	}
+	return
+}
+
 func HandleGetMeetingroomByID(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	id, err := strconv.Atoi(vars["id"])
@@ -107,13 +127,11 @@ func HandleGetMeetingroomByID(w http.ResponseWriter, req *http.Request) {
 
 func HandleGetMeetingroomReservationsByID(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
-	vars := mux.Vars(req)
-	id, err := strconv.Atoi(vars["id"])
+	id, err := GetMeetingroomIDFromUriOrError(w, req)
 	if err != nil {
-		res := getErrorTpl(http.StatusNotFound, "会议室ID不存在")
-		responseJson(w, res, http.StatusNotFound)
 		return
 	}
+
 	var begin, end string
 	if len(req.Form["begin"]) > 0 {
 		begin = req.Form["begin"][0]
@@ -130,13 +148,11 @@ func HandleGetMeetingroomReservationsByID(w http.ResponseWriter, req *http.Reque
 
 func HandlePostMeetingroomReservationByID(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
-	vars := mux.Vars(req)
-	id, err := strconv.Atoi(vars["id"])
+	id, err := GetMeetingroomIDFromUriOrError(w, req)
 	if err != nil {
-		res := getErrorTpl(http.StatusNotFound, "会议室ID不存在")
-		responseJson(w, res, http.StatusNotFound)
 		return
 	}
+
 	var begin, end string
 	if _, err = getFormItemOrErr(w, req, "access_token", "token"); err != nil {
 		if !ValidateToken(w, req) {
@@ -192,4 +208,20 @@ func HandlePostMeetingroomReservationByID(w http.ResponseWriter, req *http.Reque
 	}
 	responseJson(w, res, http.StatusOK)
 	return
+}
+
+func HandlePostPictureByMeetingroomID(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+	id, err := GetMeetingroomIDFromUriOrError(w, req)
+	if err != nil {
+		return
+	}
+
+	if len(req.Form["picture"]) == 0 {
+		responseJson(w, getErrorTpl(http.StatusBadRequest, "图片格式错误"), http.StatusBadRequest)
+	}
+	pictureEncoded := req.Form["picture"][0]
+	log.Debug(id)
+	log.Debug(pictureEncoded)
+	// TODO: Save picture to STATIC_DIR/meetingroom/picture/{id}
 }

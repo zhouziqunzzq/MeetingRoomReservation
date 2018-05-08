@@ -2,8 +2,12 @@ package model
 
 import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
+)
+
+const (
+	ADMIN   = 0
+	TEACHER = 1
 )
 
 type User struct {
@@ -17,16 +21,25 @@ type User struct {
 	Type     int    `gorm:"type:tinyint(3)" json:"type"` // 0 for admin, 1 for teacher
 }
 
-func GetUserByUsername(db *gorm.DB, username string) (user User, err error) {
-	if err = db.Where(&User{Username: username}).First(&user).Error; err != nil {
+func GetUserByUsername(username string) (user User, err error) {
+	if err = Db.Where(&User{Username: username}).First(&user).Error; err != nil {
 		err = errors.Wrap(err, "GetUser")
 	}
 	return
 }
 
-func GetUserInfoByID(db *gorm.DB, uid uint) (user User, err error) {
-	if err = db.Select("id, username, name, tel, type").Where(&User{ID: uid}).First(&user).Error; err != nil {
+func GetUserInfoByID(uid uint) (user User, err error) {
+	if err = Db.Select("id, username, name, tel, type").
+		Where(&User{ID: uid}).First(&user).Error; err != nil {
 		err = errors.Wrap(err, "GetUserInfo")
 	}
 	return
+}
+
+func CheckAdmin(uid uint) bool {
+	user, err := GetUserInfoByID(uid)
+	if err != nil || user.Type != ADMIN {
+		return false
+	}
+	return true
 }

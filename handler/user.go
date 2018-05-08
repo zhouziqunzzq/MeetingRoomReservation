@@ -7,7 +7,7 @@ import (
 )
 
 func HandleGetUserInfo(w http.ResponseWriter, req *http.Request) {
-	user, err := model.GetUserInfoByID(model.Db, GetUIDFromJWT(req))
+	user, err := model.GetUserInfoByID(GetUIDFromJWT(req))
 	if err != nil {
 		log.Error(err)
 		responseJson(w,
