@@ -50,6 +50,7 @@ func initRouter() {
 	// Meetingroom
 	mrRoutes := v1Api.PathPrefix("/meetingroom").Subrouter()
 	mrRoutes.Methods("GET").Path("/").HandlerFunc(handler.HandleGetMeetingroomList)
+	mrRoutes.Methods("GET").Path("/{id:[0-9]+}").HandlerFunc(handler.HandleGetMeetingroomByID)
 	// NotFound
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 	r.MethodNotAllowedHandler = http.HandlerFunc(handler.MethodNotAllowedHandler)

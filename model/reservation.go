@@ -16,3 +16,19 @@ type Reservation struct {
 	UpdatedAt     time.Time   `json:"updated_at"`
 	DeletedAt     *time.Time  `json:"-"`
 }
+
+func FillBeginTimeEndTime(reservations []Reservation) error {
+	for i := 0; i < len(reservations); i++ {
+		t, err := time.Parse("2006-01-02 15:04:05", reservations[i].Begin)
+		if err != nil {
+			return err
+		}
+		reservations[i].BeginTime = t.Format("15:04:05")
+		t, err = time.Parse("2006-01-02 15:04:05", reservations[i].End)
+		if err != nil {
+			return err
+		}
+		reservations[i].EndTime = t.Format("15:04:05")
+	}
+	return nil
+}
