@@ -3,3 +3,4 @@ allow_origin = ["*"]
 sqlite_path = "core.db"
 jwt_key = "foobar"
 max_query_day = 5
+static_dir = "static"

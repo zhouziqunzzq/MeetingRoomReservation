@@ -8,4 +8,5 @@ type Config struct {
 	SQLITE_FILE   string   `toml:"sqlite_path"`
 	JWT_KEY       string   `toml:"jwt_key"`
 	MAX_QUERY_DAY int      `toml:"max_query_day"`
+	STATIC_DIR    string   `toml:"static_dir"`
 }

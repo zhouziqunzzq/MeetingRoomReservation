@@ -29,6 +29,9 @@ func initDB() {
 }
 
 func initRouter() {
+	// Static file
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/",
+		http.FileServer(http.Dir(GlobalConfig.STATIC_DIR))))
 	// public subrouters
 	baseApiStr := "/api"
 	baseApiVerStr := "/v1"
@@ -72,7 +75,6 @@ func initCORS() http.Handler {
 
 func initGlobalMiddleware(h http.Handler) *negroni.Negroni {
 	n := negroni.New()
-	n.Use(negroni.NewStatic(http.Dir("app")))
 	n.Use(negroni.NewRecovery())
 	n.Use(negroni.NewLogger())
 	n.UseHandler(h)
