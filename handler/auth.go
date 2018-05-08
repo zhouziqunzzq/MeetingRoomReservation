@@ -86,3 +86,24 @@ func ValidateTokenMiddleware(w http.ResponseWriter, r *http.Request, next http.H
 		}
 	}
 }
+
+func ValidateToken(w http.ResponseWriter, r *http.Request) bool {
+	token, err := request.ParseFromRequest(r, request.OAuth2Extractor,
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(GlobalConfig.JWT_KEY), nil
+		})
+	if err != nil {
+		responseJson(w, getErrorTpl(http.StatusUnauthorized, "未授权的访问"),
+			http.StatusUnauthorized)
+		return false
+	} else {
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			context.Set(r, "uid", claims["uid"])
+			return true
+		} else {
+			responseJson(w, getErrorTpl(http.StatusUnauthorized, "无效的Token"),
+				http.StatusUnauthorized)
+			return false
+		}
+	}
+}

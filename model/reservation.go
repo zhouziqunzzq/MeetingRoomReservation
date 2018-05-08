@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"time"
+	"github.com/jinzhu/gorm"
+)
 
 type Reservation struct {
 	ID            uint        `gorm:"AUTO_INCREMENT" json:"id"`
@@ -31,4 +34,28 @@ func FillBeginTimeEndTime(reservations []Reservation) error {
 		reservations[i].EndTime = t.Format("15:04:05")
 	}
 	return nil
+}
+
+func GetReservationsByMeetingroomID(id uint, begin string, end string) []Reservation {
+	var reservations []Reservation
+	query := Db.Where("meetingroom_id = ?", id).
+		Preload("User", func(db *gorm.DB) *gorm.DB {
+		return db.Select("users.id, users.username, users.name, users.tel, users.type")
+	})
+	if len(begin) > 0 {
+		query = query.Where("begin >= ?", begin)
+	}
+	if len(end) > 0 {
+		query = query.Where("end <= ?", end)
+	}
+	query.Order("reservations.begin ASC").Find(&reservations)
+	return reservations
+}
+
+func GetReservationsWithBeginEnd(begin, end string) []Reservation {
+	var reservations []Reservation
+	Db.Where("begin <= ?", begin).Where("end >= ?", end).
+		Order("reservations.begin ASC").
+		Find(&reservations)
+	return reservations
 }

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"github.com/gorilla/mux"
 	"github.com/yanzay/log"
+	"time"
 )
 
 func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
@@ -100,6 +101,95 @@ func HandleGetMeetingroomByID(w http.ResponseWriter, req *http.Request) {
 	}
 	res := getOKTpl()
 	res["data"] = meetingrooms[0]
+	responseJson(w, res, http.StatusOK)
+	return
+}
+
+func HandleGetMeetingroomReservationsByID(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+	vars := mux.Vars(req)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		res := getErrorTpl(http.StatusNotFound, "会议室ID不存在")
+		responseJson(w, res, http.StatusNotFound)
+		return
+	}
+	var begin, end string
+	if len(req.Form["begin"]) > 0 {
+		begin = req.Form["begin"][0]
+	}
+	if len(req.Form["end"]) > 0 {
+		end = req.Form["end"][0]
+	}
+	reservations := model.GetReservationsByMeetingroomID(uint(id), begin, end)
+	res := getOKTpl()
+	res["data"] = reservations
+	responseJson(w, res, http.StatusOK)
+	return
+}
+
+func HandlePostMeetingroomReservationByID(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+	vars := mux.Vars(req)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		res := getErrorTpl(http.StatusNotFound, "会议室ID不存在")
+		responseJson(w, res, http.StatusNotFound)
+		return
+	}
+	var begin, end string
+	if _, err = getFormItemOrErr(w, req, "access_token", "token"); err != nil {
+		if !ValidateToken(w, req) {
+			return
+		}
+	}
+	if begin, err = getFormItemOrErr(w, req, "begin", "开始时间"); err != nil {
+		return
+	}
+	if end, err = getFormItemOrErr(w, req, "end", "结束时间"); err != nil {
+		return
+	}
+
+	// Check if reservation overlaps with others
+	reservations := model.GetReservationsWithBeginEnd(begin, end)
+	beginTime, err := time.Parse("2006-01-02 15:04:05", begin)
+	endTime, err := time.Parse("2006-01-02 15:04:05", end)
+	if err != nil || beginTime.Year() != endTime.Year() ||
+		beginTime.Month() != endTime.Month() || beginTime.Day() != endTime.Day() ||
+		len(reservations) > 0 {
+		res := getErrorTpl(http.StatusBadRequest, "开始时间或结束时间非法或该时间段已被占用")
+		responseJson(w, res, http.StatusBadRequest)
+		return
+	}
+	// Check if reservation is in any of timeplans
+	meetingroom := model.GetMeetingroomByID(uint(id))
+	ok := false
+	weekplan := meetingroom.Weekplan.ConvertToMap()
+	for i := 0; i < len(weekplan[beginTime.Weekday()]); i++ {
+		if weekplan[beginTime.Weekday()][i].Begin <= beginTime.Format("15:04:05") &&
+			weekplan[endTime.Weekday()][i].End >= endTime.Format("15:04:05") {
+			ok = true
+		}
+	}
+	if !ok {
+		res := getErrorTpl(http.StatusBadRequest, "该会议室在指定的时间段内不开放")
+		responseJson(w, res, http.StatusBadRequest)
+		return
+	}
+
+	// Add new reservation
+	uid := GetUIDFromJWT(req)
+	reservation := model.Reservation{
+		UserID:        uid,
+		MeetingroomID: uint(id),
+		Begin:         begin,
+		End:           end,
+	}
+	model.Db.Create(&reservation)
+	res := getOKTpl()
+	res["data"] = map[string]interface{}{
+		"reservation_id": reservation.ID,
+	}
 	responseJson(w, res, http.StatusOK)
 	return
 }

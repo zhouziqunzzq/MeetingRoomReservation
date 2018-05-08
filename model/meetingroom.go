@@ -4,6 +4,7 @@ import (
 	"time"
 	"github.com/getlantern/deepcopy"
 	"github.com/zhouziqunzzq/MeetingRoomReservation/config"
+	"github.com/jinzhu/gorm"
 )
 
 type Meetingroom struct {
@@ -155,4 +156,13 @@ func GetAvlTimeOneDay(timeplansOriginal []Timeplan, reservations []Reservation,
 		}
 		return timeslices[st : ed+1]
 	}
+}
+
+func GetMeetingroomByID(id uint) (m Meetingroom) {
+	Db.Preload("Weekplan.Dayplans", func(db *gorm.DB) *gorm.DB {
+		return db.Order("dayplans.weekday ASC")
+	}).Preload("Weekplan.Dayplans.Timeplans", func(db *gorm.DB) *gorm.DB {
+		return db.Order("timeplans.begin ASC")
+	}).Preload("Building").Where("id = ?", id).Find(&m)
+	return
 }
