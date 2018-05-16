@@ -42,7 +42,6 @@ func initRouter() {
 	adminRoutes.Methods("GET").Path("/").HandlerFunc(handler.Pong)
 	adminRoutes.Methods("POST").Path("/meetingroom/{id:[0-9]+}/picture").HandlerFunc(handler.
 		HandlePostPictureByMeetingroomID)
-
 	// NotFound
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 	r.MethodNotAllowedHandler = http.HandlerFunc(handler.MethodNotAllowedHandler)

@@ -8,76 +8,93 @@ import (
 )
 
 type Meetingroom struct {
-	ID           uint          `gorm:"AUTO_INCREMENT" json:"id"`
-	Building     Building      `json:"building"`
-	BuildingID   uint          `json:"-"`
-	Floor        int           `json:"floor"`
-	Room         string        `gorm:"type:varchar(16)" json:"room"`
-	Weekplan     Weekplan      `json:"-"`
-	WeekplanID   uint          `json:"-"`
-	Reservations []Reservation `json:"reservations"`
-	AvlTime      []TimeSlice   `gorm:"-" json:"avl_time"`
+	ID           uint                        `gorm:"AUTO_INCREMENT" json:"id"`
+	Building     Building                    `json:"building"`
+	BuildingID   uint                        `json:"-"`
+	Floor        int                         `json:"floor"`
+	Room         string                      `gorm:"type:varchar(16)" json:"room"`
+	Weekplan     Weekplan                    `json:"-"`
+	WeekplanID   uint                        `json:"-"`
+	WeekplanMap  map[time.Weekday][]Timeplan `gorm:"-" json:"-"`
+	Reservations []Reservation               `json:"reservations"`
+	AvlTime      []TimeSlice                 `gorm:"-" json:"avl_time"`
 }
 
-// GetAvlTime will calculate available time slices from now to the midnight of
+// GetAvlTimeWithDate will calculate available time slices from date-begin to date-end
+// Before calling this func, make sure that Weekplan
+// and Dayplans of the Weekplan and Timeplans of the Dayplans are set correctly.
+// date: YYYY-MM-DD
+// begin: HH:MM:SS
+// end: HH:MM:SS
+func (m *Meetingroom) GetAvlTimeWithDate(date, begin, end string) (avlTime []TimeSlice, err error) {
+	avlTime = make([]TimeSlice, 0)
+	// parse date
+	calc, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return
+	}
+	// get timeplans from weekplanMap
+	if m.WeekplanMap == nil {
+		m.WeekplanMap = m.Weekplan.ConvertToMap()
+	}
+	timeplans, ok := m.WeekplanMap[calc.Weekday()]
+	if !ok {
+		return
+	}
+	// get reservations on that day
+	var reservations []Reservation
+	Db.Where("meetingroom_id = ?", m.ID).
+		Where("begin > ?", date+"00:00:00").
+		Where("end < ?", date+"23:59:59").
+		Order("reservations.begin ASC").
+		Find(&reservations)
+	err = FillBeginTimeEndTime(reservations)
+	if err != nil {
+		return
+	}
+
+	avlTime = GetAvlTimeOneDay(timeplans, reservations, begin, end, date)
+	return
+}
+
+// GetAvlTimeWithDayCnt will calculate available time slices from now to the midnight of
 // the day after "dayCnt" days. Before calling this func, make sure that Weekplan
 // and Dayplans of the Weekplan and Timeplans of the Dayplans are set correctly.
-func (m *Meetingroom) GetAvlTime(begin, end string) (err error) {
+// begin: HH:MM:SS
+// end: HH:MM:SS
+func (m *Meetingroom) GetAvlTimeWithDayCnt(begin, end string) (avlTime []TimeSlice, err error) {
+	avlTime = make([]TimeSlice, 0)
+	var tmpAvlTime []TimeSlice
 	dayCnt := config.GlobalConfig.MAX_QUERY_DAY
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(loc)
 	nowDateStr := now.Format("2006-01-02")
 	nowTimeStr := now.Format("15:04:05")
 
-	weekplanMap := m.Weekplan.ConvertToMap()
+	if m.WeekplanMap == nil {
+		m.WeekplanMap = m.Weekplan.ConvertToMap()
+	}
 	calc, err := time.Parse("2006-01-02", now.Format("2006-01-02"))
 	if err != nil {
 		return
 	}
 	// Calc first day
-	if timeplans, ok := weekplanMap[calc.Weekday()]; ok && nowTimeStr < end {
-		var reservations []Reservation
-		beginTmp := begin
-		if nowTimeStr > begin {
-			beginTmp = nowTimeStr
-		}
-		Db.Where("meetingroom_id = ?", m.ID).
-			Where("begin > ?", nowDateStr+" 00:00:00").
-			Where("end < ?", nowDateStr+" 23:59:59").
-			Order("reservations.begin ASC").
-			Find(&reservations)
-		err = FillBeginTimeEndTime(reservations)
+	if nowTimeStr < end {
+		tmpAvlTime, err = m.GetAvlTimeWithDate(nowDateStr, nowTimeStr, end)
 		if err != nil {
 			return
 		}
-		m.AvlTime = append(m.AvlTime, GetAvlTimeOneDay(timeplans, reservations,
-			beginTmp, end, nowDateStr)...)
+		avlTime = append(avlTime, tmpAvlTime...)
 	}
 	// Calc rest of days
 	for i := 0; i < dayCnt-1; i++ {
 		calc = calc.AddDate(0, 0, 1)
-		// Check dayplan of calc.Weekday()
-		timeplans, ok := weekplanMap[calc.Weekday()]
-		if !ok {
-			continue
-		}
-
-		// Get reservations of this day
-		var reservations []Reservation
 		calcDateStr := calc.Format("2006-01-02")
-		Db.Where("meetingroom_id = ?", m.ID).
-			Where("begin > ?", calcDateStr+" 00:00:00").
-			Where("end < ?", calcDateStr+" 23:59:59").
-			Order("reservations.begin ASC").
-			Find(&reservations)
-		err = FillBeginTimeEndTime(reservations)
+		tmpAvlTime, err = m.GetAvlTimeWithDate(calcDateStr, begin, end)
 		if err != nil {
 			return
 		}
-
-		// Call GetAvlTimeOneDay and append it to final results
-		m.AvlTime = append(m.AvlTime, GetAvlTimeOneDay(timeplans, reservations,
-			begin, end, calcDateStr)...)
+		avlTime = append(avlTime, tmpAvlTime...)
 	}
 	return
 }

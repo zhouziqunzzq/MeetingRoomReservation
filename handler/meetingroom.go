@@ -12,7 +12,6 @@ import (
 )
 
 func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
-	var meetingrooms []model.Meetingroom
 	query := model.Db.Preload("Weekplan.Dayplans", func(db *gorm.DB) *gorm.DB {
 		return db.Order("dayplans.weekday ASC")
 	}).Preload("Weekplan.Dayplans.Timeplans", func(db *gorm.DB) *gorm.DB {
@@ -58,15 +57,18 @@ func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Build up meetingroom list and do filter
+	var meetingrooms []model.Meetingroom
 	query.Find(&meetingrooms)
 	for i := 0; i < len(meetingrooms); i++ {
-		err = meetingrooms[i].GetAvlTime(begin, end)
+		avlTime, err := meetingrooms[i].GetAvlTimeWithDayCnt(begin, end)
 		if err != nil {
 			log.Error(err)
 			res := getErrorTpl(http.StatusInternalServerError, err.Error())
 			responseJson(w, res, http.StatusNotFound)
 			return
 		}
+		meetingrooms[i].AvlTime = avlTime
 	}
 	res := getOKTpl()
 	res["data"] = meetingrooms
@@ -112,13 +114,14 @@ func HandleGetMeetingroomByID(w http.ResponseWriter, req *http.Request) {
 		responseJson(w, res, http.StatusNotFound)
 		return
 	}
-	err = meetingrooms[0].GetAvlTime("00:00:00", "23:59:59")
+	avlTime, err := meetingrooms[0].GetAvlTimeWithDayCnt("00:00:00", "23:59:59")
 	if err != nil {
 		log.Error(err)
 		res := getErrorTpl(http.StatusInternalServerError, err.Error())
 		responseJson(w, res, http.StatusNotFound)
 		return
 	}
+	meetingrooms[0].AvlTime = avlTime
 	res := getOKTpl()
 	res["data"] = meetingrooms[0]
 	responseJson(w, res, http.StatusOK)
