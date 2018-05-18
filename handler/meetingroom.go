@@ -20,9 +20,24 @@ func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 
 	// Build up query with req params
+	var isStrict bool
 	var buildingID, floor int
 	var err error
-	var begin, end string
+	var date, begin, end string
+	var dateFmtStrLen = len("YYYY-MM-DD")
+	var timeFmtStrLen = len("HH:MM:SS")
+	// is_strict: required
+	isStrictStr, err := getFormItemOrErr(w, req, "is_strict", "是否为严格模式")
+	if err != nil {
+		return
+	}
+	isStrict, err = strconv.ParseBool(isStrictStr)
+	if err != nil {
+		res := getErrorTpl(http.StatusBadRequest, "参数错误:is_strict")
+		responseJson(w, res, http.StatusBadRequest)
+		return
+	}
+	// building_id
 	if len(req.Form["building_id"]) > 0 {
 		buildingID, err = strconv.Atoi(req.Form["building_id"][0])
 		if err != nil {
@@ -32,6 +47,7 @@ func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
 		}
 		query = query.Where("building_id = ?", buildingID)
 	}
+	// floor
 	if len(req.Form["floor"]) > 0 {
 		floor, err = strconv.Atoi(req.Form["floor"][0])
 		if err != nil {
@@ -41,15 +57,36 @@ func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
 		}
 		query = query.Where("floor = ?", floor)
 	}
+	// date
+	if len(req.Form["date"]) > 0 {
+		date = req.Form["date"][0]
+	}
+	if len(date) != dateFmtStrLen && len(date) != 0 {
+		res := getErrorTpl(http.StatusBadRequest, "date格式错误")
+		responseJson(w, res, http.StatusBadRequest)
+		return
+	}
+	// begin
 	if len(req.Form["begin"]) > 0 {
 		begin = req.Form["begin"][0]
 	} else {
 		begin = "00:00:00"
 	}
+	if len(begin) != timeFmtStrLen {
+		res := getErrorTpl(http.StatusBadRequest, "begin格式错误")
+		responseJson(w, res, http.StatusBadRequest)
+		return
+	}
+	// end
 	if len(req.Form["end"]) > 0 {
 		end = req.Form["end"][0]
 	} else {
 		end = "23:59:59"
+	}
+	if len(end) != timeFmtStrLen {
+		res := getErrorTpl(http.StatusBadRequest, "end格式错误")
+		responseJson(w, res, http.StatusBadRequest)
+		return
 	}
 	if begin > end {
 		res := getErrorTpl(http.StatusBadRequest, "参数错误:begin必须在end之前")
@@ -59,19 +96,39 @@ func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
 
 	// Build up meetingroom list and do filter
 	var meetingrooms []model.Meetingroom
+	var meetingroomsFiltered = make([]model.Meetingroom, 0)
 	query.Find(&meetingrooms)
 	for i := 0; i < len(meetingrooms); i++ {
-		avlTime, err := meetingrooms[i].GetAvlTimeWithDayCnt(begin, end)
+		var avlTime []model.TimeSlice
+		var err error
+		if len(date) == dateFmtStrLen {
+			avlTime, err = meetingrooms[i].GetAvlTimeWithDate(date, begin, end)
+		} else if len(date) == 0 {
+			avlTime, err = meetingrooms[i].GetAvlTimeWithDayCnt(begin, end)
+		}
 		if err != nil {
 			log.Error(err)
 			res := getErrorTpl(http.StatusInternalServerError, err.Error())
-			responseJson(w, res, http.StatusNotFound)
+			responseJson(w, res, http.StatusInternalServerError)
 			return
 		}
-		meetingrooms[i].AvlTime = avlTime
+		if isStrict {
+			var avlTimeFiltered = make([]model.TimeSlice, 0)
+			for j := 0; j < len(avlTime); j++ {
+				if begin == avlTime[j].GetBeginTimeStr() &&
+					end == avlTime[j].GetEndTimeStr() {
+					avlTimeFiltered = append(avlTimeFiltered, avlTime[i])
+				}
+			}
+			avlTime = avlTimeFiltered
+		}
+		if len(avlTime) > 0 {
+			meetingrooms[i].AvlTime = avlTime
+			meetingroomsFiltered = append(meetingroomsFiltered, meetingrooms[i])
+		}
 	}
 	res := getOKTpl()
-	res["data"] = meetingrooms
+	res["data"] = meetingroomsFiltered
 	responseJson(w, res, http.StatusOK)
 	return
 }
