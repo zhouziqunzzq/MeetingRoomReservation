@@ -151,6 +151,7 @@ func GetAvlTimeOneDay(timeplansOriginal []Timeplan, reservations []Reservation,
 				st = i
 				timeslices[i].Begin = begin
 			}
+			stLock = true
 		}
 		if !edLock && end >= timeslices[i].Begin && end >= timeslices[i].End {
 			ed = i
