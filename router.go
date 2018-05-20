@@ -28,6 +28,7 @@ func initRouter() {
 	userRoutes := handler.GetSubrouterWithMiddlewares(v1Api, baseStr,
 		"/user", handler.ValidateTokenMiddleware)
 	userRoutes.Methods("GET").Path("/info").HandlerFunc(handler.HandleGetUserInfo)
+	userRoutes.Methods("GET").Path("/reservation").HandlerFunc(handler.HandleGetUserReservationList)
 	// Meetingroom
 	mrRoutes := v1Api.PathPrefix("/meetingroom").Subrouter()
 	mrRoutes.Methods("GET").Path("/").HandlerFunc(handler.HandleGetMeetingroomList)

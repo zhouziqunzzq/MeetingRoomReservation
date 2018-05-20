@@ -52,6 +52,22 @@ func GetReservationsByMeetingroomID(id uint, begin string, end string) []Reserva
 	return reservations
 }
 
+func GetReservationsByUserIDWithHistorySwitch(uid uint, isHistory bool) []Reservation {
+	var reservations []Reservation
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	now := time.Now().In(loc)
+	nowStr := now.Format("2006-01-02 15:04:05")
+	query := Db.Where("user_id = ?", uid).
+		Preload("Meetingroom.Building")
+	if isHistory {
+		query = query.Where("end <= ?", nowStr)
+	} else {
+		query = query.Where("end > ?", nowStr)
+	}
+	query.Order("reservations.begin ASC").Find(&reservations)
+	return reservations
+}
+
 func GetReservationsWithBeginEnd(begin, end string) []Reservation {
 	var reservations []Reservation
 	Db.Where("begin <= ?", begin).Where("end >= ?", end).
