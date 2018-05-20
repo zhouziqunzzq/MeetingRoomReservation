@@ -117,7 +117,7 @@ func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
 			for j := 0; j < len(avlTime); j++ {
 				if begin == avlTime[j].GetBeginTimeStr() &&
 					end == avlTime[j].GetEndTimeStr() {
-					avlTimeFiltered = append(avlTimeFiltered, avlTime[i])
+					avlTimeFiltered = append(avlTimeFiltered, avlTime[j])
 				}
 			}
 			avlTime = avlTimeFiltered
