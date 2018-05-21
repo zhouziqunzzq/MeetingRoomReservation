@@ -33,6 +33,8 @@ func initRouter() {
 	mrRoutes := v1Api.PathPrefix("/meetingroom").Subrouter()
 	mrRoutes.Methods("GET").Path("/").HandlerFunc(handler.HandleGetMeetingroomList)
 	mrRoutes.Methods("GET").Path("/{id:[0-9]+}").HandlerFunc(handler.HandleGetMeetingroomByID)
+	mrRoutes.Methods("POST").Path("/{id:[0-9]+}/unlock").
+		HandlerFunc(handler.HandlePostMeetingroomUnlockByID)
 	mrRoutes.Methods("GET").Path("/{id:[0-9]+}/reservation").
 		HandlerFunc(handler.HandleGetMeetingroomReservationsByID)
 	mrRoutes.Methods("POST").Path("/{id:[0-9]+}/reservation").

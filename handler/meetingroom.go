@@ -9,6 +9,8 @@ import (
 	"github.com/yanzay/log"
 	"time"
 	"github.com/pkg/errors"
+	"github.com/zhouziqunzzq/MeetingRoomReservation/config"
+	"github.com/zhouziqunzzq/MeetingRoomReservation/lockcontroller"
 )
 
 func HandleGetMeetingroomList(w http.ResponseWriter, req *http.Request) {
@@ -227,7 +229,7 @@ func HandlePostMeetingroomReservationByID(w http.ResponseWriter, req *http.Reque
 	}
 
 	// Check if reservation overlaps with others
-	reservations := model.GetReservationsWithBeginEnd(begin, end)
+	reservations := model.GetReservationsContainingBeginEnd(begin, end)
 	beginTime, err := time.Parse("2006-01-02 15:04:05", begin)
 	endTime, err := time.Parse("2006-01-02 15:04:05", end)
 	if err != nil || beginTime.Year() != endTime.Year() ||
@@ -284,4 +286,49 @@ func HandlePostPictureByMeetingroomID(w http.ResponseWriter, req *http.Request) 
 	log.Debug(id)
 	log.Debug(pictureEncoded)
 	// TODO: Save picture to STATIC_DIR/meetingroom/picture/{id}
+}
+
+func HandlePostMeetingroomUnlockByID(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+	mid, err := GetMeetingroomIDFromUriOrError(w, req)
+	if err != nil {
+		return
+	}
+	if _, err = getFormItemOrErr(w, req, "access_token", "token"); err != nil {
+		if !ValidateToken(w, req) {
+			return
+		}
+	}
+	uid := GetUIDFromJWT(req)
+
+	// Check user's reservation
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	now := time.Now().In(loc)
+	nowStr := now.Format("2006-01-02 15:04:05")
+	nowAdvanced := now.Add(time.Minute * time.Duration(config.GlobalConfig.LOCK_ADVANCED_MINUTE))
+	nowAdvancedStr := nowAdvanced.Format("2006-01-02 15:04:05")
+	reservations := model.GetReservationsInUseWithMeetingroomIDUserID(uint(mid), uint(uid),
+		nowStr, nowAdvancedStr)
+
+	if len(reservations) <= 0 {
+		res := getOKTpl()
+		res["result"] = false
+		res["msg"] = "您没有预定本时间段的会议室，请检查"
+		responseJson(w, res, http.StatusOK)
+		return
+	} else {
+		meetingroom := model.GetMeetingroomByID(uint(mid))
+		err := lockcontroller.Unlock(meetingroom.IP)
+		if err != nil {
+			res := getOKTpl()
+			res["result"] = false
+			res["msg"] = "会议室解锁失败，请重试"
+			responseJson(w, res, http.StatusOK)
+		} else {
+			res := getOKTpl()
+			res["msg"] = "会议室解锁成功"
+			responseJson(w, res, http.StatusOK)
+		}
+	}
+	return
 }

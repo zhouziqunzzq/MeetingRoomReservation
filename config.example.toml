@@ -1,6 +1,14 @@
+# HTTP server settings
 port = 8080
 allow_origin = ["*"]
-sqlite_path = "core.db"
 jwt_key = "foobar"
-max_query_day = 5
 static_dir = "static"
+
+# Database settings
+sqlite_path = "core.db"
+
+# Other settings
+max_query_day = 5
+lock_advanced_minute = 5
+lock_port = "8888"
+lock_cmd = "AAAAAAAA"

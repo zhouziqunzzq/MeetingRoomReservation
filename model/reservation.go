@@ -68,9 +68,37 @@ func GetReservationsByUserIDWithHistorySwitch(uid uint, isHistory bool) []Reserv
 	return reservations
 }
 
-func GetReservationsWithBeginEnd(begin, end string) []Reservation {
+//             begin|_________|end
+//    r_begin|____________________|r_end
+func GetReservationsContainingBeginEnd(begin, end string) []Reservation {
 	var reservations []Reservation
 	Db.Where("begin <= ?", begin).Where("end >= ?", end).
+		Order("reservations.begin ASC").
+		Find(&reservations)
+	return reservations
+}
+
+//      begin|____________________|end
+//            r_begin|_____|r_end
+func GetReservationsInBeginEndWithMeetingroomID(id uint, begin, end string) []Reservation {
+	var reservations []Reservation
+	Db.Where("meetingroom_id = ?", id).
+		Where("begin >= ?", begin).Where("end <= ?", end).
+		Order("reservations.begin ASC").
+		Find(&reservations)
+	return reservations
+}
+
+//            now|  |nowAdvanced
+//       r1_begin|_____|r1_end
+//         r2_begin|_____|r2_end
+//   r3_begin|________|r3_end
+func GetReservationsInUseWithMeetingroomIDUserID(mid, uid uint, now, nowAdvanced string) []Reservation {
+	var reservations []Reservation
+	Db.Where("meetingroom_id = ?", mid).
+		Where("user_id = ?", uid).
+		Where("begin <= ?", nowAdvanced).
+		Where("end >= ?", now).
 		Order("reservations.begin ASC").
 		Find(&reservations)
 	return reservations

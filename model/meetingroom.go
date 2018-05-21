@@ -15,6 +15,7 @@ type Meetingroom struct {
 	Room         string                      `gorm:"type:varchar(16)" json:"room"`
 	Weekplan     Weekplan                    `json:"-"`
 	WeekplanID   uint                        `json:"-"`
+	IP           string                      `gorm:"type:varchar(64)" json:"ip"`
 	WeekplanMap  map[time.Weekday][]Timeplan `gorm:"-" json:"-"`
 	Reservations []Reservation               `json:"reservations"`
 	AvlTime      []TimeSlice                 `gorm:"-" json:"avl_time"`
@@ -42,12 +43,7 @@ func (m *Meetingroom) GetAvlTimeWithDate(date, begin, end string) (avlTime []Tim
 		return
 	}
 	// get reservations on that day
-	var reservations []Reservation
-	Db.Where("meetingroom_id = ?", m.ID).
-		Where("begin > ?", date+"00:00:00").
-		Where("end < ?", date+"23:59:59").
-		Order("reservations.begin ASC").
-		Find(&reservations)
+	reservations := GetReservationsInBeginEndWithMeetingroomID(m.ID, date+" 00:00:00", date+" 23:59:59")
 	err = FillBeginTimeEndTime(reservations)
 	if err != nil {
 		return
